@@ -86,7 +86,7 @@ class TodoModel
     public function createTodo($title, $description = '')
     {
         // Validasi judul tidak boleh sama
-        if ($this->isTitleExists($title)) {
+        if ($this->isTitleExists(trim($title))) {
             return false;
         }
 
@@ -110,7 +110,7 @@ class TodoModel
     public function updateTodo($id, $title, $description, $isFinished)
     {
         // Validasi judul tidak boleh sama dengan todo lain
-        if ($this->isTitleExists($title, $id)) {
+        if ($this->isTitleExists(trim($title), $id)) {
             return false;
         }
 
