@@ -86,7 +86,8 @@ class TodoModel
     public function createTodo($title, $description = '')
     {
         // Validasi judul tidak boleh sama
-        if ($this->isTitleExists(trim($title))) {
+        $cleanTitle = trim($title);
+        if ($this->isTitleExists($cleanTitle)) {
             return false;
         }
 
@@ -101,7 +102,7 @@ class TodoModel
         }
 
         $query = 'INSERT INTO todo (title, description, sort_order, created_at, updated_at) VALUES ($1, $2, $3, NOW(), NOW())';
-        $result = pg_query_params($this->conn, $query, [$title, $description, $nextOrder]);
+        $result = pg_query_params($this->conn, $query, [$cleanTitle, $description, $nextOrder]);
         
         return $result !== false;
     }
@@ -109,13 +110,14 @@ class TodoModel
     // Update todo
     public function updateTodo($id, $title, $description, $isFinished)
     {
+        $cleanTitle = trim($title);
         // Validasi judul tidak boleh sama dengan todo lain
-        if ($this->isTitleExists(trim($title), $id)) {
+        if ($this->isTitleExists($cleanTitle, $id)) {
             return false;
         }
 
         $query = 'UPDATE todo SET title=$1, description=$2, is_finished=$3, updated_at=NOW() WHERE id=$4';
-        $result = pg_query_params($this->conn, $query, [$title, $description, $isFinished, $id]);
+        $result = pg_query_params($this->conn, $query, [$cleanTitle, $description, $isFinished, $id]);
         
         return $result !== false;
     }
