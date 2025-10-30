@@ -465,6 +465,9 @@
                 window.location.href = '?page=delete&id=<?= $todo['id'] ?>';
             }
         }
+
+       
+
     </script>
 </body>
 </html>

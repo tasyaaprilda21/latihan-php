@@ -167,26 +167,30 @@
             font-weight: 700;
         }
         .status-badge {
-            padding: 10px 20px;
+            padding: 8px 14px;
             border-radius: 50px;
             font-weight: 700;
-            font-size: 0.9rem;
+            font-size: 0.8rem;
+            white-space: nowrap;
+            display: inline-block;
         }
         .status-finished {
-            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            background: linear-gradient(200deg, #11998e 0%, #38ef7d 100%);
             color: white;
         }
         .status-unfinished {
             background: linear-gradient(135deg, #fa8e53 0%, #feb47b 100%);
             color: white;
         }
+
         .btn-action {
             border: none;
             border-radius: 12px;
-            padding: 8px 18px;
+            padding: 8px 12px;
             font-weight: 600;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             transition: all 0.3s;
+            white-space: nowrap;
         }
         .btn-detail {
             background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
@@ -293,7 +297,7 @@
                         </div>
                         <div class="stat-item">
                             <div class="stat-number"><?= $unfinishedTodos ?></div>
-                            <div class="stat-label">⏳ Belum</div>
+                            <div class="stat-label">⏳ Belum Selesai</div>
                         </div>
                     </div>
 
@@ -348,9 +352,9 @@
                                             <th style="width: 80px;">#</th>
                                             <th>Judul</th>
                                             <th>Deskripsi</th>
-                                            <th style="width: 150px;">Status</th>
-                                            <th style="width: 180px;">Tanggal</th>
-                                            <th style="width: 300px;">Aksi</th>
+                                            <th style="width: 160px;">Status</th>
+                                            <th style="width: 140px;">Tanggal</th>
+                                            <th style="width: 260px;">Aksi</th>
                                         </tr>
                                     </thead>
                                     <tbody id="todoTableBody">
@@ -386,15 +390,15 @@
                                                         </small>
                                                     </td>
                                                     <td>
-                                                        <div class="d-flex gap-2">
-                                                            <a href="?page=detail&id=<?= $todo['id'] ?>" class="btn btn-sm btn-action btn-detail">
-                                                                <i class="bi bi-eye me-1"></i>Detail
+                                                        <div class="d-flex gap-1 flex-nowrap">
+                                                            <a href="?page=detail&id=<?= $todo['id'] ?>" class="btn btn-sm btn-action btn-detail" title="Detail">
+                                                                <i class="bi bi-eye"></i>
                                                             </a>
-                                                            <button class="btn btn-sm btn-action btn-edit" onclick="showModalEditTodo(<?= $todo['id'] ?>, '<?= htmlspecialchars(addslashes($todo['title'])) ?>', '<?= htmlspecialchars(addslashes($todo['description'])) ?>', '<?= $todo['is_finished'] == 't' || $todo['is_finished'] == '1' ? '1' : '0' ?>')">
-                                                                <i class="bi bi-pencil me-1"></i>Ubah
+                                                            <button class="btn btn-sm btn-action btn-edit" title="Ubah" onclick="showModalEditTodo(<?= $todo['id'] ?>, '<?= htmlspecialchars(addslashes($todo['title'])) ?>', '<?= htmlspecialchars(addslashes($todo['description'])) ?>', '<?= $todo['is_finished'] == 't' || $todo['is_finished'] == '1' ? '1' : '0' ?>')">
+                                                                <i class="bi bi-pencil"></i>
                                                             </button>
-                                                            <button class="btn btn-sm btn-action btn-delete" onclick="showModalDeleteTodo(<?= $todo['id'] ?>, '<?= htmlspecialchars(addslashes($todo['title'])) ?>')">
-                                                                <i class="bi bi-trash me-1"></i>Hapus
+                                                            <button class="btn btn-sm btn-action btn-delete" title="Hapus" onclick="showModalDeleteTodo(<?= $todo['id'] ?>, '<?= htmlspecialchars(addslashes($todo['title'])) ?>')">
+                                                                <i class="bi bi-trash"></i>
                                                             </button>
                                                         </div>
                                                     </td>
@@ -477,7 +481,7 @@
                             <label class="form-label fw-bold">Deskripsi</label>
                             <textarea name="description" class="form-control" id="inputEditDescription" rows="4"></textarea>
                         </div>
-                        <div class="mb-5">
+                        <div class="mb-3">
                             <label class="form-label fw-bold">Status</label>
                             <select class="form-select" name="is_finished" id="selectEditStatus">
                                 <option value="0">⏳ Belum Selesai</option>
@@ -580,5 +584,3 @@
     </script>
 </body>
 </html>
-
-
