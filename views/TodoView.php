@@ -477,7 +477,7 @@
                             <label class="form-label fw-bold">Deskripsi</label>
                             <textarea name="description" class="form-control" id="inputEditDescription" rows="4"></textarea>
                         </div>
-                        <div class="mb-3">
+                        <div class="mb-5">
                             <label class="form-label fw-bold">Status</label>
                             <select class="form-select" name="is_finished" id="selectEditStatus">
                                 <option value="0">⏳ Belum Selesai</option>
