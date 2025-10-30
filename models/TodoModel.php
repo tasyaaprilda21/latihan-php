@@ -7,40 +7,47 @@ class TodoModel
 
     public function __construct()
     {
-        // Inisialisasi koneksi database PostgreSQL
-        $this->conn = pg_connect('host=' . DB_HOST . ' port=' . DB_PORT . ' dbname=' . DB_NAME . ' user=' . DB_USER . ' password=' . DB_PASSWORD);
-        
+        $this->conn = pg_connect(
+            'host=' . DB_HOST .
+            ' port=' . DB_PORT .
+            ' dbname=' . DB_NAME .
+            ' user=' . DB_USER .
+            ' password=' . DB_PASSWORD
+        );
+
         if (!$this->conn) {
             die('Koneksi database gagal');
         }
-    }
+    
+    // 🔍 Tes koneksi untuk memastikan database aktif
+    $result = pg_query($this->conn, "SELECT current_database() AS db, current_user AS user");
+    $row = pg_fetch_assoc($result);
+    error_log("✅ Koneksi aktif ke database: " . $row['db'] . " | user: " . $row['user']);
+}
 
-    // Mendapatkan semua todos dengan filter dan pencarian
+    // =========================
+    // Ambil semua todo
+    // =========================
     public function getAllTodos($filter = 'all', $search = '')
     {
         $query = 'SELECT * FROM todo WHERE 1=1';
         $params = [];
-        $paramCount = 1;
 
-        // Filter berdasarkan status
         if ($filter === 'finished') {
             $query .= ' AND is_finished = true';
         } elseif ($filter === 'unfinished') {
             $query .= ' AND is_finished = false';
         }
 
-        // Pencarian berdasarkan title atau description
         if (!empty($search)) {
-            $query .= ' AND (LOWER(title) LIKE $' . $paramCount . ' OR LOWER(description) LIKE $' . $paramCount . ')';
+            $query .= ' AND (LOWER(title) LIKE $1 OR LOWER(description) LIKE $1)';
             $params[] = '%' . strtolower($search) . '%';
-            $paramCount++;
         }
 
         $query .= ' ORDER BY sort_order ASC, created_at DESC';
-
         $result = pg_query_params($this->conn, $query, $params);
-        $todos = [];
 
+        $todos = [];
         if ($result && pg_num_rows($result) > 0) {
             while ($row = pg_fetch_assoc($result)) {
                 $todos[] = $row;
@@ -50,106 +57,130 @@ class TodoModel
         return $todos;
     }
 
-    // Mendapatkan todo berdasarkan ID
+    // =========================
+    // Ambil todo berdasarkan ID
+    // =========================
     public function getTodoById($id)
     {
         $query = 'SELECT * FROM todo WHERE id = $1';
         $result = pg_query_params($this->conn, $query, [$id]);
-
-        if ($result && pg_num_rows($result) > 0) {
-            return pg_fetch_assoc($result);
-        }
-
-        return null;
+        return $result && pg_num_rows($result) > 0 ? pg_fetch_assoc($result) : null;
     }
 
+    // =========================
+    // Cek apakah judul sudah ada
+    // =========================
     // Cek apakah title sudah ada (untuk validasi)
     public function isTitleExists($title, $excludeId = null)
-    {
-        if ($excludeId) {
-            $query = 'SELECT COUNT(*) as count FROM todo WHERE LOWER(title) = LOWER($1) AND id != $2';
-            $result = pg_query_params($this->conn, $query, [$title, $excludeId]);
-        } else {
-            $query = 'SELECT COUNT(*) as count FROM todo WHERE LOWER(title) = LOWER($1)';
-            $result = pg_query_params($this->conn, $query, [$title]);
-        }
+{
+    if ($excludeId) {
+        $query = 'SELECT COUNT(*) AS total FROM todo WHERE LOWER(title) = LOWER($1) AND id != $2';
+        $params = [$title, $excludeId];
+    } else {
+        $query = 'SELECT COUNT(*) AS total FROM todo WHERE LOWER(title) = LOWER($1)';
+        $params = [$title];
+    }
 
-        if ($result) {
-            $row = pg_fetch_assoc($result);
-            return $row['count'] > 0;
-        }
+    $result = pg_query_params($this->conn, $query, $params);
 
+    if (!$result) {
+        error_log('❌ Query cek duplikat gagal: ' . pg_last_error($this->conn));
         return false;
     }
 
-    // Membuat todo baru
-    public function createTodo($title, $description = '')
-    {
-        // Validasi judul tidak boleh sama
-        if ($this->isTitleExists($title)) {
-            return false;
-        }
+    $row = pg_fetch_assoc($result);
+    $count = isset($row['total']) ? intval($row['total']) : 0;
 
-        // Dapatkan sort_order tertinggi
-        $maxOrderQuery = 'SELECT COALESCE(MAX(sort_order), -1) + 1 as next_order FROM todo';
-        $maxOrderResult = pg_query($this->conn, $maxOrderQuery);
-        $nextOrder = 0;
-        
-        if ($maxOrderResult) {
-            $row = pg_fetch_assoc($maxOrderResult);
-            $nextOrder = $row['next_order'];
-        }
+    // Tambahkan log debug
+    error_log("🔍 DEBUG isTitleExists: title='{$title}' | total={$count}");
 
-        $query = 'INSERT INTO todo (title, description, sort_order, created_at, updated_at) VALUES ($1, $2, $3, NOW(), NOW())';
-        $result = pg_query_params($this->conn, $query, [$title, $description, $nextOrder]);
-        
-        return $result !== false;
+    return $count > 0;
+}
+
+
+// Membuat todo baru
+public function createTodo($title, $description = '')
+{
+    // Cek duplikat judul
+    if ($this->isTitleExists($title)) {
+        error_log("Judul '$title' sudah ada, batalkan insert.");
+        return false;
     }
 
+    // Ambil urutan tertinggi
+    $maxOrderQuery = 'SELECT COALESCE(MAX(sort_order), 0) + 1 AS next_order FROM todo';
+    $maxOrderResult = pg_query($this->conn, $maxOrderQuery);
+    $nextOrder = 0;
+
+    if ($maxOrderResult) {
+        $row = pg_fetch_assoc($maxOrderResult);
+        $nextOrder = (int)$row['next_order'];
+    }
+
+    // Masukkan data baru
+    $query = 'INSERT INTO todo (title, description, sort_order, created_at, updated_at)
+              VALUES ($1, $2, $3, NOW(), NOW())';
+    $result = pg_query_params($this->conn, $query, [$title, $description, $nextOrder]);
+
+    if (!$result) {
+        error_log('Gagal menambah todo: ' . pg_last_error($this->conn));
+    }
+
+    return $result !== false;
+}
+
+    // =========================
     // Update todo
+    // =========================
     public function updateTodo($id, $title, $description, $isFinished)
     {
-        // Validasi judul tidak boleh sama dengan todo lain
         if ($this->isTitleExists($title, $id)) {
             return false;
         }
 
         $query = 'UPDATE todo SET title=$1, description=$2, is_finished=$3, updated_at=NOW() WHERE id=$4';
         $result = pg_query_params($this->conn, $query, [$title, $description, $isFinished, $id]);
-        
+
+        if (!$result) {
+            error_log('Gagal update todo: ' . pg_last_error($this->conn));
+        }
+
         return $result !== false;
     }
 
-    // Update sort order untuk drag and drop
+    // =========================
+    // Update urutan sort
+    // =========================
     public function updateSortOrder($todoOrders)
     {
         pg_query($this->conn, 'BEGIN');
-
         try {
             foreach ($todoOrders as $order => $id) {
                 $query = 'UPDATE todo SET sort_order = $1 WHERE id = $2';
                 $result = pg_query_params($this->conn, $query, [$order, $id]);
-                
                 if (!$result) {
                     pg_query($this->conn, 'ROLLBACK');
                     return false;
                 }
             }
-
             pg_query($this->conn, 'COMMIT');
             return true;
         } catch (Exception $e) {
             pg_query($this->conn, 'ROLLBACK');
+            error_log('Gagal update urutan: ' . $e->getMessage());
             return false;
         }
     }
 
+    // =========================
     // Hapus todo
+    // =========================
     public function deleteTodo($id)
     {
         $query = 'DELETE FROM todo WHERE id=$1';
         $result = pg_query_params($this->conn, $query, [$id]);
-        
         return $result !== false;
     }
 }
+
+
